@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#f4f7fc">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="description" content="非官方 BFG 电动车电量校准工具界面。通过本地蓝牙连接本人车辆，核对信息、备份参数并谨慎校准。">
+  <title>BFG 电量校准 · 车辆工具台</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="icon-battery" viewBox="0 0 24 24"><rect x="3" y="6" width="16" height="12" rx="3"/><path d="M22 10v4M7 10v4m4-4v4m4-4v4"/></symbol>
+    <symbol id="icon-bluetooth" viewBox="0 0 24 24"><path d="m7 7 10 10-5 4V3l5 4L7 17"/></symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="icon-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Z"/><path d="m8 12 3 3 5-6"/></symbol>
+    <symbol id="icon-sliders" viewBox="0 0 24 24"><path d="M4 7h7m6 0h3M4 17h3m6 0h7"/><circle cx="14" cy="7" r="3"/><circle cx="10" cy="17" r="3"/></symbol>
+    <symbol id="icon-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 16v4h16v-4"/></symbol>
+    <symbol id="icon-alert" viewBox="0 0 24 24"><path d="m10.3 4-8 14a2 2 0 0 0 1.7 3h16a2 2 0 0 0 1.7-3l-8-14a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4m0 4h.01"/></symbol>
+    <symbol id="icon-pulse" viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></symbol>
+    <symbol id="icon-chevron" viewBox="0 0 24 24"><path d="m8 4 8 8-8 8"/></symbol>
+  </svg>
+
+  <main id="main-content" class="page-shell">
+    <section class="page-intro" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">BFG · BATTERY CALIBRATION</p>
+        <h1 id="page-title">电量参数，清晰掌握。</h1>
+        <p class="intro-description">连接并配对本人车辆，点击读取信息后核对车辆参数，再进入校准与备份页面。</p>
+      </div>
+      <button id="demo-btn" class="button button-secondary" type="button">
+        <svg class="icon" aria-hidden="true"><use href="#icon-pulse"/></svg>
+        查看界面演示
+        <span class="button-meta">不连接实车</span>
+      </button>
+    </section>
+
+    <section class="status-panel" aria-label="操作状态">
+      <span class="status-dot" aria-hidden="true"></span>
+      <div class="status-copy" role="status" aria-live="polite" aria-atomic="true">
+        <strong id="status-text">尚未连接车辆</strong>
+        <span id="busy-text">请先检查浏览器环境，再选择并连接蓝牙车辆。</span>
+      </div>
+      <span class="status-label">本地蓝牙连接</span>
+    </section>
+    <div id="error-box" class="notice notice-danger error-box" role="alert" hidden></div>
+    <noscript><div class="notice notice-warning">JavaScript 未启用。当前仅能查看静态界面，无法连接、读取或校准车辆。</div></noscript>
+
+    <div class="workspace">
+      <section id="connection-section" class="card view-card connection-card" data-page="connection" aria-labelledby="connection-title">
+        <div class="view-heading connection-heading">
+          <div class="card-heading"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#icon-bluetooth"/></svg></span><div><p class="section-kicker">连接 / CONNECTION</p><h2 id="connection-title" tabindex="-1">连接与配对</h2></div></div>
+          <div class="connection-badges" aria-label="环境与连接模式">
+            <span id="mode-badge" class="badge badge-blue" role="status" aria-live="polite">未连接</span>
+          </div>
+        </div>
+        <div class="view-content">
+        <p class="card-description">靠近并唤醒车辆，选择蓝牙设备后在车上确认临时配对。配对成功，再点击读取信息。</p>
+        <label class="consent-box" for="owner-check">
+          <input id="owner-check" name="owner-check" type="checkbox">
+          <span><strong>我确认这是本人车辆，并有权进行本次操作。</strong><span>我理解：在车上确认临时密钥配对，可能使官方旧凭据失效，并影响原有连接。</span></span>
+        </label>
+        <div class="connection-actions">
+          <button id="connect-btn" class="button button-primary button-full" type="button"><svg class="icon" aria-hidden="true"><use href="#icon-bluetooth"/></svg>选择并连接蓝牙车辆</button>
+          <button id="pair-btn" class="button button-secondary button-full" type="button" disabled>开始临时密钥配对</button>
+          <div class="button-row"><button id="read-btn" class="button button-secondary" type="button" disabled>读取信息</button><button id="disconnect-btn" class="button button-quiet" type="button" disabled>断开</button></div>
+        </div>
+        <p class="panel-footnote"><svg class="icon" aria-hidden="true"><use href="#icon-shield"/></svg>蓝牙操作必须在用户本机完成，服务端无法代替连接。</p>
+        </div>
+      </section>
+
+      <section id="information-section" class="card view-card information-card" data-page="information" aria-labelledby="information-title" hidden>
+        <div class="view-heading card-heading"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#icon-battery"/></svg></span><div><p class="section-kicker">读取 / INFORMATION</p><h2 id="information-title" tabindex="-1">车辆信息</h2></div></div>
+        <div class="view-content">
+        <div class="metrics" aria-label="电池读数" aria-live="polite">
+          <div class="metric metric-primary"><span class="metric-label">当前电量</span><div class="metric-value"><strong id="metric-soc">--</strong><span>%</span></div><span class="metric-caption">SOC</span></div>
+          <div class="metric"><span class="metric-label">电池电压</span><div class="metric-value"><strong id="metric-voltage">--</strong><span>V</span></div><span class="metric-caption">VOLTAGE</span></div>
+          <div class="metric"><span class="metric-label">电池容量</span><div class="metric-value"><strong id="metric-capacity">--</strong><span>Ah</span></div><span class="metric-caption">CAPACITY</span></div>
+        </div>
+        <dl class="identity-grid"><div><dt>车辆序列号</dt><dd id="info-sn">--</dd></div><div><dt>车辆型号</dt><dd id="info-model">--</dd></div></dl>
+        <div class="subsection-heading"><h3>固件版本</h3><span>写入前请核对兼容性</span></div>
+        <dl class="firmware-grid"><div><dt>仪表 / Dashboard</dt><dd id="fw-dashboard">--</dd></div><div><dt>彩屏 / Color</dt><dd id="fw-color">--</dd></div><div><dt>中控 / Center</dt><dd id="fw-center">--</dd></div><div><dt>计量 / Meter</dt><dd id="fw-meter">--</dd></div></dl>
+        <div class="subsection-heading"><h3>当前配置</h3><span>未读取时不显示预估值</span></div>
+        <div class="table-scroll"><table class="config-table"><caption class="sr-only">仪表与计量模块的当前电压、容量配置</caption><thead><tr><th scope="col">模块</th><th scope="col">配置电压</th><th scope="col">配置容量</th></tr></thead><tbody><tr><th scope="row">仪表 <span>Dashboard</span></th><td><span id="config-dashboard-voltage">--</span> <span class="unit">V</span></td><td><span id="config-dashboard-capacity">--</span> <span class="unit">Ah</span></td></tr><tr><th scope="row">计量 <span>Meter</span></th><td><span id="config-meter-voltage">--</span> <span class="unit">V</span></td><td><span id="config-meter-capacity">--</span> <span class="unit">Ah</span></td></tr></tbody></table></div>
+        <p class="panel-footnote">这里只展示主控读取的结果；未读到的项目显示为未确认，不使用预估数据。</p>
+        <nav class="page-actions" aria-label="车辆信息页面导航">
+          <button class="button button-secondary" type="button" data-go-page="connection"><svg class="icon back-arrow" aria-hidden="true"><use href="#icon-chevron"/></svg>返回连接与配对</button>
+          <button id="calibration-page-btn" class="button button-primary" type="button" data-go-page="calibration" disabled>参数校准<svg class="icon" aria-hidden="true"><use href="#icon-chevron"/></svg></button>
+        </nav>
+        </div>
+      </section>
+
+      <section id="calibration-section" class="card view-card calibration-card" data-page="calibration" aria-labelledby="calibration-title" hidden>
+        <div class="view-heading card-heading"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#icon-sliders"/></svg></span><div><p class="section-kicker">校准 / CALIBRATION</p><h2 id="calibration-title" tabindex="-1">参数校准</h2></div></div>
+        <div class="view-content">
+        <p class="card-description">读取后可按实际电池规格设置参数，无需先备份。备份为可选操作，写入前仍需确认风险并重新核对配置。</p>
+        <div class="field"><label for="write-type">校准模块</label><select id="write-type" name="write-type" aria-describedby="meter-note dashboard-note"><option value="meter" selected>计量模块 · Meter</option><option value="dashboard">仪表模块 · Dashboard（高风险）</option></select></div>
+        <div class="fields-two"><div class="field"><label for="target-voltage">目标电压 <span class="label-note">V</span></label><select id="target-voltage" name="target-voltage"><option value="48">48 V</option><option value="60" selected>60 V</option><option value="72">72 V</option></select></div><div class="field"><label for="target-capacity">目标容量 <span class="label-note">Ah</span></label><select id="target-capacity" name="target-capacity" aria-describedby="capacity-help"><option value="" selected>请选择容量</option></select></div></div>
+        <p id="capacity-help" class="field-help capacity-help">可选容量由主控根据协议与车辆支持情况加载，当前尚无可选容量。</p>
+        <div id="meter-note" class="notice notice-info"><svg class="icon" aria-hidden="true"><use href="#icon-pulse"/></svg><div><strong>Meter · 临时生效</strong><p>计量模块校准为临时生效，不应视为永久修改；重新上电或其他车辆操作后需重新读取确认。</p></div></div>
+        <div id="dashboard-note" class="notice notice-danger"><svg class="icon" aria-hidden="true"><use href="#icon-alert"/></svg><div><strong>Dashboard · 高风险写入</strong><p>可能造成<strong>计量模块损坏、车辆无法启动</strong>。即使已备份，也<strong>不保证可恢复</strong>。固件兼容性和协议未确认前，不得写入。</p></div></div>
+        <div class="write-lock"><span class="lock-label"><svg class="icon" aria-hidden="true"><use href="#icon-shield"/></svg>固件与写入限制</span><p id="write-reason" role="status" aria-live="polite">尚未读取固件与配置，暂不允许写入。请完成连接、配对及信息核对；备份可选。</p></div>
+        <button id="write-btn" class="button button-primary button-full" type="button" disabled>确认参数并校准</button>
+        <nav class="page-actions" aria-label="参数校准页面导航">
+          <button class="button button-secondary" type="button" data-go-page="information"><svg class="icon back-arrow" aria-hidden="true"><use href="#icon-chevron"/></svg>返回车辆信息</button>
+          <button id="backup-page-btn" class="button button-primary" type="button" data-go-page="backup" disabled>备份与恢复<svg class="icon" aria-hidden="true"><use href="#icon-chevron"/></svg></button>
+        </nav>
+        </div>
+      </section>
+
+      <section id="backup-section" class="card view-card backup-card" data-page="backup" aria-labelledby="backup-title" hidden>
+        <div class="view-heading card-heading"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#icon-shield"/></svg></span><div><p class="section-kicker">备份 / BACKUP</p><h2 id="backup-title" tabindex="-1">备份与恢复</h2></div></div>
+        <div class="view-content">
+        <p class="card-description">可自行选择是否导出配置记录，不影响修改参数。恢复仍属于写入操作，必须导入可信备份并核对车辆、固件和内容。</p>
+        <div class="backup-guidance"><span class="backup-symbol"><svg class="icon" aria-hidden="true"><use href="#icon-download"/></svg></span><div><strong>备份可选，无需备份也能修改</strong><p>备份文件仅作配置记录，不是完整固件镜像，也不是恢复成功的保证。</p></div></div>
+        <button id="export-backup-btn" class="button button-secondary button-full" type="button" disabled><svg class="icon" aria-hidden="true"><use href="#icon-download"/></svg>导出当前配置备份</button>
+        <div class="field import-field"><label for="import-backup">导入配置备份 <span class="label-note">JSON</span></label><input id="import-backup" name="import-backup" type="file" accept="application/json" aria-describedby="import-help"><p id="import-help" class="field-help">只导入可信来源的本人车辆备份。选择文件不等于执行恢复。</p></div>
+        <button id="restore-btn" class="button button-secondary button-full" type="button" disabled>核对备份并恢复</button>
+        <div class="backup-state"><span class="status-dot" aria-hidden="true"></span><p id="backup-status" role="status" aria-live="polite">尚未导出或导入备份。</p></div>
+        <p class="panel-footnote">请妥善保存备份与诊断文件；分享前检查是否包含车辆标识或敏感凭据。</p>
+        <nav class="page-actions page-actions-single" aria-label="备份与恢复页面导航">
+          <button class="button button-secondary" type="button" data-go-page="calibration"><svg class="icon back-arrow" aria-hidden="true"><use href="#icon-chevron"/></svg>返回参数校准</button>
+        </nav>
+        </div>
+      </section>
+    </div>
+
+    <section id="log-section" class="card log-card" data-page="connection" aria-labelledby="log-title">
+      <div class="log-heading"><div class="card-heading"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#icon-pulse"/></svg></span><div><p class="section-kicker">诊断 / DIAGNOSTICS</p><h2 id="log-title">操作日志</h2></div></div><button id="export-diag-btn" class="button button-secondary button-small" type="button"><svg class="icon" aria-hidden="true"><use href="#icon-download"/></svg>导出诊断</button></div>
+      <div class="log-surface"><ol id="log-list" class="log-list" aria-label="操作日志列表" aria-live="polite" aria-relevant="additions text"></ol><p class="log-empty">尚无操作日志。连接与读取记录将在此显示。</p></div>
+      <div class="protocol-status"><span class="protocol-label">协议状态</span><p id="protocol-note" role="status">待加载。协议兼容性与实车验证状态尚未确认。</p></div>
+    </section>
+
+        <footer class="site-footer"><span><strong>BFG</strong> 电量校准 · 非官方工具</span><span>真实读取 · 谨慎写入 · 备份不保证恢复</span></footer>
+  </main>
+</body>
+</html>
